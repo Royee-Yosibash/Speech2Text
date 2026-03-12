@@ -4,13 +4,10 @@ Provides the primary UI: a speak button to trigger recording, a status
 indicator, and a read-only text area that displays transcription results.
 """
 
-import os
-import wave
-
-import numpy as np
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
+    QComboBox,
     QHBoxLayout,
     QLabel,
     QMainWindow,
@@ -21,6 +18,8 @@ from PyQt6.QtWidgets import (
 )
 
 from backend.recorder import Recorder, SilentAudioError, check_audio_not_silent
+from backend.transcription_engine import TranscriptionEngine
+from backend.whisper_engine import WhisperEngine
 
 WINDOW_TITLE = "Speech2Text"
 WINDOW_MIN_WIDTH = 500
@@ -33,7 +32,11 @@ STATUS_TRANSCRIBING = "Transcribing..."
 BUTTON_LABEL_SPEAK = "Speak"
 BUTTON_LABEL_STOP = "Stop"
 
-TEST_WAV_FILENAME = "test_audio.wav"
+SUPPORTED_LANGUAGES = [
+    ("English", "en"),
+    ("German", "de"),
+    ("Spanish", "es"),
+]
 
 STYLESHEET = """
     QPushButton#speakButton {
@@ -75,6 +78,7 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self._recorder = Recorder()
+        self._engine: TranscriptionEngine = WhisperEngine()
         self._setup_window()
         self._build_ui()
         self.setStyleSheet(STYLESHEET)
@@ -106,6 +110,17 @@ class MainWindow(QMainWindow):
         button_row.addWidget(self.speak_button)
         button_row.addStretch()
         layout.addLayout(button_row)
+
+        # -- Language selector --
+        self.language_combo = QComboBox()
+        for display_name, code in SUPPORTED_LANGUAGES:
+            self.language_combo.addItem(display_name, code)
+
+        language_row = QHBoxLayout()
+        language_row.addStretch()
+        language_row.addWidget(self.language_combo)
+        language_row.addStretch()
+        layout.addLayout(language_row)
 
         # -- Status indicator --
         self.status_label = QLabel(STATUS_IDLE)
@@ -141,7 +156,7 @@ class MainWindow(QMainWindow):
         self.status_label.setText(STATUS_RECORDING)
 
     def _stop_recording(self) -> None:
-        """Stop capturing audio, save to WAV, and update UI."""
+        """Stop capturing audio, transcribe it, and update UI."""
         audio_data = self._recorder.stop()
         self.speak_button.setText(BUTTON_LABEL_SPEAK)
         self.speak_button.setProperty("recording", "false")
@@ -155,22 +170,9 @@ class MainWindow(QMainWindow):
             self.transcription_area.setPlainText(f"No audio detected: {e}")
             return
 
-        wav_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), TEST_WAV_FILENAME)
-        _save_wav(wav_path, audio_data, self._recorder.sample_rate)
-        self.transcription_area.setPlainText(f"Audio saved to {wav_path}")
-
-
-def _save_wav(path: str, audio: np.ndarray, sample_rate: int) -> None:
-    """Write a float32 audio array to a 16-bit PCM WAV file.
-
-    Args:
-        path: Destination file path.
-        audio: 1-D float32 audio samples in [-1.0, 1.0].
-        sample_rate: Sample rate in Hz.
-    """
-    pcm = (audio * 32767).astype(np.int16)
-    with wave.open(path, "wb") as wf:
-        wf.setnchannels(1)
-        wf.setsampwidth(2)
-        wf.setframerate(sample_rate)
-        wf.writeframes(pcm.tobytes())
+        self.status_label.setText(STATUS_TRANSCRIBING)
+        self.transcription_area.setPlainText("")
+        language = self.language_combo.currentData()
+        text = self._engine.transcribe(audio_data, language=language)
+        self.status_label.setText(STATUS_IDLE)
+        self.transcription_area.setPlainText(text)
