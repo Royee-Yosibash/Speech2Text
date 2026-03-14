@@ -7,3 +7,11 @@ sandbox*
 # Except these
 !.gitignore
 !.github/
+
+# PyInstaller build artifacts
+build/
+dist/
+*.spec
+
+# Downloaded models
+models/

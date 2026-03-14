@@ -2,3 +2,4 @@ PyQt6>=6.5
 sounddevice>=0.4
 numpy>=1.24
 openai-whisper
+pyinstaller>=6.0
