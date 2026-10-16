@@ -75,7 +75,7 @@ STYLESHEET = """
 class MainWindow(QMainWindow):
     """Primary application window containing all Speech2Text UI elements."""
 
-    def __init__(self) -> None:
+    def __init__(self):
         super().__init__()
         self._recorder = Recorder()
         self._engine: TranscriptionEngine = WhisperEngine()
@@ -83,12 +83,12 @@ class MainWindow(QMainWindow):
         self._build_ui()
         self.setStyleSheet(STYLESHEET)
 
-    def _setup_window(self) -> None:
+    def _setup_window(self):
         """Configure top-level window properties."""
         self.setWindowTitle(WINDOW_TITLE)
         self.setMinimumSize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
 
-    def _build_ui(self) -> None:
+    def _build_ui(self):
         """Construct and lay out all child widgets."""
         central = QWidget()
         self.setCentralWidget(central)
@@ -139,14 +139,14 @@ class MainWindow(QMainWindow):
         self.transcription_area.setPlaceholderText("Transcribed text will appear here...")
         layout.addWidget(self.transcription_area, stretch=1)
 
-    def _on_speak_clicked(self) -> None:
+    def _on_speak_clicked(self):
         """Toggle recording on or off when the Speak button is clicked."""
         if self._recorder.is_recording:
             self._stop_recording()
         else:
             self._start_recording()
 
-    def _start_recording(self) -> None:
+    def _start_recording(self):
         """Start capturing audio and update UI to reflect recording state."""
         self._recorder.start()
         self.speak_button.setText(BUTTON_LABEL_STOP)
@@ -155,7 +155,7 @@ class MainWindow(QMainWindow):
         self.speak_button.style().polish(self.speak_button)
         self.status_label.setText(STATUS_RECORDING)
 
-    def _stop_recording(self) -> None:
+    def _stop_recording(self):
         """Stop capturing audio, transcribe it, and update UI."""
         audio_data = self._recorder.stop()
         self.speak_button.setText(BUTTON_LABEL_SPEAK)

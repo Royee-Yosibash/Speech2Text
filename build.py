@@ -25,7 +25,7 @@ WHISPER_ASSETS_SRC = f"{WHISPER_PACKAGE_DIR}/assets"
 WHISPER_ASSETS_DST = "whisper/assets"
 
 
-def build() -> None:
+def build():
     """Download the Whisper model and invoke PyInstaller."""
     model_name = WhisperEngine.select_model_name()
     models_dir = WhisperEngine.get_models_dir()

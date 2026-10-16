@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import QApplication
 from ui.main_window import MainWindow
 
 
-def main() -> None:
+def main():
     """Initialize the Qt application and show the main window."""
     app = QApplication(sys.argv)
     window = MainWindow()
