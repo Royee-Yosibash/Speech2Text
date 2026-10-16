@@ -89,6 +89,46 @@ python main.py
 
 On first run the model is downloaded automatically to the `models/` directory.
 
+## Headless Interface
+
+Other applications can use the same recorder and transcription engine without
+opening the desktop window. The Python API is available through
+`backend.speech_service.SpeechToTextService`:
+
+```python
+from backend.speech_service import SpeechToTextService
+
+service = SpeechToTextService()
+try:
+    service.start_recording(language="en")
+    transcript = service.stop_recording()
+finally:
+    service.close()
+```
+
+For external processes, run the persistent JSON-lines worker from the project
+root:
+
+```bash
+python -m backend.worker
+```
+
+The worker loads Whisper once, then reads one JSON object per line from stdin
+and writes one JSON event per line to stdout. Each command must be newline
+terminated:
+
+```json
+{"action":"start","language":"en"}
+{"action":"stop"}
+{"action":"shutdown"}
+```
+
+The `language` field is optional and defaults to `en`. Events include `ready`,
+`recording_started`, `transcription_completed` (with a `text` field),
+`shutdown`, or `error` (with a `message` field). End-of-input also shuts down
+the worker and releases the microphone. Model loading and transcription output
+that is not part of the protocol goes to stderr.
+
 ## Building a Standalone Executable
 
 The included `build.py` script uses PyInstaller to produce a distributable binary that bundles the model and all dependencies.
