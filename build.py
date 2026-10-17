@@ -1,68 +1,78 @@
-"""Build a standalone executable for Speech2Text using PyInstaller.
+"""Build the shared desktop and worker distribution with PyInstaller.
 
-Supports both Linux and Windows. Downloads the best Whisper model for
-the build machine's hardware and bundles it into the executable.
+Supports Linux and Windows. Downloads the selected Whisper model and bundles
+the desktop app and headless worker into one onedir distribution.
 
 Usage:
     python build.py
+    python build.py --install
 
 Requires:
-    pip install -r requirements.txt
+    pip install -e '.[build]'
 """
 
-import platform
+import argparse
+import os
 import subprocess
 import sys
+from pathlib import Path
 
-import whisper
+from speech2text.model.whisper_engine import WhisperEngine
 
-from backend.model.whisper_engine import WhisperEngine
-
-APP_NAME = "Speech2Text"
-
-WHISPER_PACKAGE_DIR = whisper.__path__[0]
-WHISPER_ASSETS_SRC = f"{WHISPER_PACKAGE_DIR}/assets"
-WHISPER_ASSETS_DST = "whisper/assets"
+PROJECT_ROOT = Path(__file__).resolve().parent
+SPEC_FILE = PROJECT_ROOT / "Speech2Text.spec"
+DEFAULT_DIST_PATH = PROJECT_ROOT / "dist"
 
 
-def build():
-    """Download the Whisper model and invoke PyInstaller."""
+def build(dist_path: Path = DEFAULT_DIST_PATH) -> None:
+    """Download the selected model and build the shared PyInstaller bundle."""
     model_name = WhisperEngine.select_model_name()
     models_dir = WhisperEngine.get_models_dir()
     print(f"Downloading Whisper model '{model_name}' into {models_dir} ...")
     WhisperEngine.download_model(model_name, models_dir)
 
-    separator = ";" if platform.system() == "Windows" else ":"
-    whisper_data = f"{WHISPER_ASSETS_SRC}{separator}{WHISPER_ASSETS_DST}"
-    models_data = f"{models_dir}{separator}models"
-
     cmd = [
-        sys.executable, "-m", "PyInstaller",
-        "--name", APP_NAME,
-        "--onedir",
-        "--windowed",
+        sys.executable,
+        "-m",
+        "PyInstaller",
         "--noconfirm",
-        "--add-data", whisper_data,
-        "--add-data", models_data,
-        "--hidden-import", "whisper",
-        "--hidden-import", "tiktoken",
-        "--hidden-import", "tiktoken_ext",
-        "--hidden-import", "tiktoken_ext.openai_public",
-        "main.py",
+        "--clean",
+        "--distpath",
+        str(dist_path),
+        str(SPEC_FILE),
     ]
 
-    subprocess.run(cmd, check=True)
+    subprocess.run(cmd, check=True, cwd=PROJECT_ROOT)
+
+
+def main() -> None:
+    """Build the distribution locally or into a per-user install location."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--install",
+        action="store_true",
+        help="Build under XDG_DATA_HOME or ~/.local/share.",
+    )
+    parser.add_argument(
+        "--distpath",
+        type=Path,
+        help="PyInstaller output directory (contains the Speech2Text bundle).",
+    )
+    arguments = parser.parse_args()
+    if arguments.install and arguments.distpath is not None:
+        parser.error("--install and --distpath cannot be used together")
+
+    if arguments.install:
+        default_data_dir = Path.home() / ".local" / "share"
+        dist_path = Path(os.environ.get("XDG_DATA_HOME", default_data_dir)).expanduser()
+    elif arguments.distpath is not None:
+        dist_path = arguments.distpath.expanduser()
+    else:
+        dist_path = DEFAULT_DIST_PATH
+
+    build(dist_path)
 
 
 if __name__ == "__main__":
-    """
-    Build a standalone executable.
-
-    Run from the project root:
-        python build.py
-
-    No arguments required. The executable will appear in dist/Speech2Text/.
-    To override the auto-selected model, set WHISPER_MODEL env var:
-        WHISPER_MODEL=small python build.py
-    """
-    build()
+    # Build locally with python build.py, or install with python build.py --install.
+    main()
