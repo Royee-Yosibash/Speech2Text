@@ -1,10 +1,11 @@
 # Speech2Text
 
-A desktop application that captures microphone input and transcribes it to text using a local model. No data leaves the machine.
+A local speech-to-text application and installable Python package. Use the PyQt desktop app or the headless worker to record microphone input and transcribe it with Whisper on-device.
 
 ## Features
 
 - **Push-to-talk recording** -- toggle the "Speak" button to record audio from the default system microphone.
+- **Headless worker** -- other applications can control recording and receive transcripts over a JSON-lines interface, without launching the desktop UI.
 - **Local transcription** -- audio is transcribed on-device. No network requests.
 - **Multi-language support** -- English, German, and Spanish out of the box.
 - **Automatic model selection** -- picks the best model size based on available GPU VRAM (or falls back to CPU).
@@ -14,16 +15,13 @@ A desktop application that captures microphone input and transcribes it to text 
 ## Architecture
 
 ```
+       ┌──────────────────┐   ┌─────────────────┐
+       │ Desktop UI       │   │ Headless worker │
+       │ PyQt6            │   │ JSON-lines      │
+       └────────┬─────────┘   └────────┬────────┘
+                └──────────┬───────────┘
+                           ▼
 ┌─────────────────────────────┐
-│           UI Layer          │
-│  (PyQt6 desktop window)    │
-│  - Speak / Stop button     │
-│  - Language selector        │
-│  - Transcription display   │
-│  - Status indicator        │
-└─────────┬───────────────────┘
-          │
-┌─────────▼───────────────────┐
 │       Audio Capture         │
 │  (sounddevice + numpy)      │
 │  - Record from mic          │
