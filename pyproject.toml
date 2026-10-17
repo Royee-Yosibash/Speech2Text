@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "speech2text"
+version = "1.0.0"
+description = "Local microphone recording and transcription"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "sounddevice>=0.4",
+    "numpy>=1.24",
+    "openai-whisper",
+]
+
+[project.optional-dependencies]
+desktop = ["PyQt6>=6.5"]
+build = ["pyinstaller>=6.0", "PyQt6>=6.5"]
+
+[project.scripts]
+speech2text-worker = "speech2text.worker:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

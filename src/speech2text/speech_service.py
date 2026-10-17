@@ -4,9 +4,9 @@ import re
 
 import numpy as np
 
-from backend.model.whisper_engine import WhisperEngine
-from backend.recorder import Recorder, check_audio_not_silent
-from backend.transcription_engine import TranscriptionEngine
+from .model.whisper_engine import WhisperEngine
+from .recorder import Recorder, check_audio_not_silent
+from .transcription_engine import TranscriptionEngine
 
 DEFAULT_LANGUAGE = "en"
 LANGUAGE_CODE_PATTERN = re.compile(r"^[a-z]{2}$")
@@ -27,7 +27,7 @@ class SpeechToTextService:
         engine: TranscriptionEngine | None = None,
     ):
         self._recorder = recorder if recorder is not None else Recorder()
-        self._engine = engine if engine is not None else WhisperEngine()
+        self._engine = engine
         self._language = DEFAULT_LANGUAGE
 
     @property
@@ -66,9 +66,19 @@ class SpeechToTextService:
         """
         audio: np.ndarray = self._recorder.stop()
         check_audio_not_silent(audio)
-        return self._engine.transcribe(audio, language=self._language)
+        return self._get_engine().transcribe(audio, language=self._language)
 
     def close(self):
         """Release the microphone, discarding any active recording."""
         if self.is_recording:
             self._recorder.stop()
+
+    def _get_engine(self) -> TranscriptionEngine:
+        """Load the transcription engine on first use and reuse it afterwards.
+
+        Returns:
+            The cached transcription engine.
+        """
+        if self._engine is None:
+            self._engine = WhisperEngine()
+        return self._engine

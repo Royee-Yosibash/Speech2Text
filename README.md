@@ -1,10 +1,11 @@
 # Speech2Text
 
-A desktop application that captures microphone input and transcribes it to text using a local model. No data leaves the machine.
+A local speech-to-text application and installable Python package. Use the PyQt desktop app or the headless worker to record microphone input and transcribe it with Whisper on-device.
 
 ## Features
 
 - **Push-to-talk recording** -- toggle the "Speak" button to record audio from the default system microphone.
+- **Headless worker** -- other applications can control recording and receive transcripts over a JSON-lines interface, without launching the desktop UI.
 - **Local transcription** -- audio is transcribed on-device. No network requests.
 - **Multi-language support** -- English, German, and Spanish out of the box.
 - **Automatic model selection** -- picks the best model size based on available GPU VRAM (or falls back to CPU).
@@ -14,16 +15,13 @@ A desktop application that captures microphone input and transcribes it to text 
 ## Architecture
 
 ```
+       ┌──────────────────┐   ┌─────────────────┐
+       │ Desktop UI       │   │ Headless worker │
+       │ PyQt6            │   │ JSON-lines      │
+       └────────┬─────────┘   └────────┬────────┘
+                └──────────┬───────────┘
+                           ▼
 ┌─────────────────────────────┐
-│           UI Layer          │
-│  (PyQt6 desktop window)    │
-│  - Speak / Stop button     │
-│  - Language selector        │
-│  - Transcription display   │
-│  - Status indicator        │
-└─────────┬───────────────────┘
-          │
-┌─────────▼───────────────────┐
 │       Audio Capture         │
 │  (sounddevice + numpy)      │
 │  - Record from mic          │
@@ -45,17 +43,20 @@ A desktop application that captures microphone input and transcribes it to text 
 Speech2Text/
 ├── main.py                          # Entry point
 ├── build.py                         # Build script (PyInstaller)
-├── requirements.txt
+├── Speech2Text.spec                 # Shared GUI/worker bundle
+├── pyproject.toml                   # Installable speech2text package
 ├── ui/
 │   ├── __init__.py
 │   └── main_window.py               # PyQt6 window and widgets
-└── backend/
-    ├── __init__.py
-    ├── recorder.py                  # Microphone capture and silence detection
-    ├── transcription_engine.py      # Abstract transcription interface
-    └── model/
+└── src/
+    └── speech2text/
         ├── __init__.py
-        └── whisper_engine.py        # Whisper model selection, download, and inference
+        ├── recorder.py              # Microphone capture and silence detection
+        ├── speech_service.py        # Reusable headless service
+        ├── transcription_engine.py
+        ├── worker.py                # JSON-lines worker entry point
+        └── model/
+            └── whisper_engine.py
 ```
 
 ## Prerequisites
@@ -72,8 +73,11 @@ cd speech2text
 python -m venv .venv
 source .venv/bin/activate   # Linux
 # .venv\Scripts\activate    # Windows
-pip install -r requirements.txt
+pip install -e '.[build]'
 ```
+
+This installs the `speech2text` package in editable mode and provides the
+`speech2text-worker` console command.
 
 ## Usage
 
@@ -87,16 +91,18 @@ python main.py
 4. Click again to stop recording.
 5. The transcribed text appears in the display area.
 
-On first run the model is downloaded automatically to the `models/` directory.
+On first transcription the model is downloaded automatically. Source checkouts
+store it in `models/`; installed packages use `~/.cache/speech2text/models`.
+Set `SPEECH2TEXT_MODEL_DIR` to override the model directory.
 
 ## Headless Interface
 
-Other applications can use the same recorder and transcription engine without
-opening the desktop window. The Python API is available through
-`backend.speech_service.SpeechToTextService`:
+Other applications can install and use the reusable `speech2text` package
+without importing the desktop UI. The Python API is available through
+`speech2text.SpeechToTextService`:
 
 ```python
-from backend.speech_service import SpeechToTextService
+from speech2text import SpeechToTextService
 
 service = SpeechToTextService()
 try:
@@ -106,15 +112,24 @@ finally:
     service.close()
 ```
 
-For external processes, run the persistent JSON-lines worker from the project
-root:
+The package installs a persistent worker command for external processes:
 
 ```bash
-python -m backend.worker
+speech2text-worker
 ```
 
-The worker loads Whisper once, then reads one JSON object per line from stdin
-and writes one JSON event per line to stdout. Each command must be newline
+When running from a source checkout, use `python -m speech2text.worker`
+from the project root.
+
+In the PyInstaller bundle, run the worker through the shared executable:
+
+```bash
+Speech2Text --worker
+```
+
+The worker reads one JSON object per line from stdin and writes one JSON event
+per line to stdout. It loads Whisper on the first successful transcription and
+keeps the model loaded for later recordings. Each command must be newline
 terminated:
 
 ```json
@@ -131,7 +146,9 @@ that is not part of the protocol goes to stderr.
 
 ## Building a Standalone Executable
 
-The included `build.py` script uses PyInstaller to produce a distributable binary that bundles the model and all dependencies.
+The included `build.py` script uses PyInstaller to produce one installable
+folder containing both the desktop application and the headless worker. They
+share the bundled Python runtime, dependencies, and Whisper model.
 
 ```bash
 python build.py
@@ -141,7 +158,25 @@ This will:
 
 1. Detect your hardware (GPU VRAM or CPU-only) and select the appropriate model.
 2. Download the model into `models/` if not already present.
-3. Bundle everything into `dist/Speech2Text/`.
+3. Bundle the desktop app and `--worker` mode into `dist/Speech2Text/`.
+
+To build the shared distribution directly into the user's data directory:
+
+```bash
+python build.py --install
+```
+
+On Linux, the bundle is installed under `~/.local/share/Speech2Text/` (or
+`$XDG_DATA_HOME/Speech2Text/`). OpenCode can run the worker from that bundle.
+Use `--distpath` to build into another permanent location:
+
+```bash
+python build.py --distpath /path/to/permanent/location
+```
+
+The installed bundle contains its Python runtime, dependencies, and selected
+Whisper model. The build virtual environment is only needed to create the
+bundle; OpenCode runs `Speech2Text --worker` directly.
 
 To override the auto-selected model:
 
@@ -156,6 +191,9 @@ The resulting executable is at:
 |---|---|
 | Linux | `dist/Speech2Text/Speech2Text` |
 | Windows | `dist\Speech2Text\Speech2Text.exe` |
+
+The same executable runs the worker with `--worker`, which is how the OpenCode
+plugin connects to it.
 
 ## Model Selection
 

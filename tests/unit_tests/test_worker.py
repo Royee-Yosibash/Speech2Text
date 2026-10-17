@@ -6,7 +6,7 @@ import unittest
 
 import numpy as np
 
-from backend.worker import JsonLineWorker
+from speech2text.worker import JsonLineWorker
 from tests.unit_tests.speech_harness import SpeechHarness
 
 

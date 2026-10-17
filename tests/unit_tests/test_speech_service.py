@@ -5,8 +5,7 @@ from unittest.mock import ANY
 
 import numpy as np
 
-from backend.recorder import SilentAudioError
-from backend.speech_service import SpeechToTextService
+from speech2text.recorder import SilentAudioError
 from tests.unit_tests.speech_harness import SpeechHarness
 
 
@@ -43,6 +42,7 @@ class SpeechToTextServiceTests(unittest.TestCase):
         harness.stream.stop.assert_called_once_with()
         harness.stream.close.assert_called_once_with()
         harness.model.transcribe.assert_not_called()
+        harness.model_loader.assert_not_called()
         self.assertFalse(harness.service.is_recording)
 
     def test_start_rejects_non_iso_language_code(self) -> None:
@@ -63,7 +63,21 @@ class SpeechToTextServiceTests(unittest.TestCase):
             harness.service.stop_recording()
 
         harness.stream.stop.assert_called_once_with()
+        harness.model_loader.assert_not_called()
         harness.model.transcribe.assert_not_called()
+
+    def test_engine_loads_once_when_first_transcription_is_requested(self) -> None:
+        """The model remains unloaded during recording and is reused afterwards."""
+        harness = SpeechHarness(self, np.full((32, 1), 0.1, dtype=np.float32))
+        self.assertEqual(harness.model_loader.call_count, 0)
+
+        harness.service.start_recording()
+        harness.service.stop_recording()
+        harness.service.start_recording()
+        harness.service.stop_recording()
+
+        self.assertEqual(harness.model_loader.call_count, 1)
+        self.assertEqual(harness.model.transcribe.call_count, 2)
 
     def test_recorder_uses_whisper_audio_format(self) -> None:
         """The actual recorder configures the stream for mono 16 kHz float audio."""

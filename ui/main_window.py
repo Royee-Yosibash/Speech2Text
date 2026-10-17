@@ -17,9 +17,9 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from backend.recorder import Recorder, SilentAudioError, check_audio_not_silent
-from backend.transcription_engine import TranscriptionEngine
-from backend.model.whisper_engine import WhisperEngine
+from speech2text.recorder import Recorder, SilentAudioError, check_audio_not_silent
+from speech2text.transcription_engine import TranscriptionEngine
+from speech2text.model.whisper_engine import WhisperEngine
 
 WINDOW_TITLE = "Speech2Text"
 WINDOW_MIN_WIDTH = 500

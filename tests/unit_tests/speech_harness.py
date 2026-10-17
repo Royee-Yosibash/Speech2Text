@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 import numpy as np
 
-from backend.speech_service import SpeechToTextService
+from speech2text.speech_service import SpeechToTextService
 
 
 class SpeechHarness:
@@ -28,10 +28,10 @@ class SpeechHarness:
         self.model.transcribe.return_value = {"text": " recognized speech "}
         self.model_loader = Mock(return_value=self.model)
 
-        input_stream_patch = patch("backend.recorder.sd.InputStream", self.input_stream_factory)
-        model_loader_patch = patch("backend.model.whisper_engine.whisper.load_model", self.model_loader)
+        input_stream_patch = patch("speech2text.recorder.sd.InputStream", self.input_stream_factory)
+        model_loader_patch = patch("speech2text.model.whisper_engine.whisper.load_model", self.model_loader)
         model_selection_patch = patch(
-            "backend.model.whisper_engine.WhisperEngine.select_model_name",
+            "speech2text.model.whisper_engine.WhisperEngine.select_model_name",
             return_value="base",
         )
         test_case.addCleanup(input_stream_patch.stop)

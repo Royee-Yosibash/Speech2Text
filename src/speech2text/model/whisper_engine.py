@@ -7,14 +7,17 @@ hardware and path resolution for bundled executables.
 
 import os
 import sys
+from pathlib import Path
 
 import numpy as np
 import torch
 import whisper
 
-from backend.transcription_engine import TranscriptionEngine
+from speech2text.transcription_engine import TranscriptionEngine
 
 MODELS_DIR_NAME = "models"
+APPLICATION_NAME = "speech2text"
+MODEL_DIR_ENVIRONMENT_VARIABLE = "SPEECH2TEXT_MODEL_DIR"
 
 GPU_VRAM_THRESHOLDS_GB = [
     (8, "medium"),
@@ -81,22 +84,38 @@ class WhisperEngine(TranscriptionEngine):
 
     @staticmethod
     def get_models_dir() -> str:
-        """Return the absolute path to the models directory.
+        """Return the writable model directory for this installation.
 
-        When running inside a PyInstaller bundle the path points to the
-        bundled ``models/`` directory.  Otherwise it points to the
-        ``models/`` directory next to the project root.
+        Honors ``SPEECH2TEXT_MODEL_DIR`` first. Frozen applications use bundled
+        models; source checkouts retain their project-level ``models/`` folder;
+        installed packages use the user's cache directory.
 
         Returns:
             Absolute path to the models directory.
         """
         if getattr(sys, "frozen", False):
-            base = sys._MEIPASS
-        else:
-            base = os.path.dirname(
-                os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            )
-        return os.path.join(base, MODELS_DIR_NAME)
+            bundled_models_dir = Path(sys._MEIPASS) / MODELS_DIR_NAME
+            if bundled_models_dir.is_dir():
+                return str(bundled_models_dir)
+
+            executable_dir = Path(sys.executable).resolve().parent
+            shared_models_dir = executable_dir / "_internal" / MODELS_DIR_NAME
+            if shared_models_dir.is_dir():
+                return str(shared_models_dir)
+
+            return str(bundled_models_dir)
+
+        configured_dir = os.environ.get(MODEL_DIR_ENVIRONMENT_VARIABLE)
+        if configured_dir:
+            return os.path.abspath(os.path.expanduser(configured_dir))
+
+        source_root = Path(__file__).resolve().parents[4]
+        source_models_dir = source_root / MODELS_DIR_NAME
+        if (source_root / "pyproject.toml").is_file():
+            return str(source_models_dir)
+
+        cache_root = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
+        return str(cache_root / APPLICATION_NAME / MODELS_DIR_NAME)
 
     @staticmethod
     def download_model(model_name: str, target_dir: str) -> str:

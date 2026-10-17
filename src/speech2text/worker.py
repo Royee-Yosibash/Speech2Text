@@ -1,6 +1,6 @@
 """JSON-lines worker interface for external speech-to-text clients.
 
-Run with ``python -m backend.worker`` from the project root. The worker reads
+Run with ``python -m speech2text.worker`` from the project root. The worker reads
 one JSON command per line from stdin and writes one JSON event per line to
 stdout. Diagnostics and model-loading output are written to stderr.
 """
@@ -11,7 +11,7 @@ from contextlib import redirect_stdout
 from enum import Enum
 from typing import TextIO
 
-from backend.speech_service import (
+from speech2text.speech_service import (
     DEFAULT_LANGUAGE,
     MESSAGE_LANGUAGE_REQUIRED,
     SpeechToTextService,
@@ -146,5 +146,5 @@ def main():
 
 
 if __name__ == "__main__":
-    # Run from the project root with: python -m backend.worker
+    # Run from the project root with: python -m speech2text.worker
     main()
