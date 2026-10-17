@@ -8,6 +8,7 @@ version = "1.0.0"
 description = "Local microphone recording and transcription"
 readme = "README.md"
 requires-python = ">=3.12"
+authors = [{ name = "Royee Yosibash" }]
 dependencies = [
     "sounddevice>=0.4",
     "numpy>=1.24",
@@ -20,6 +21,14 @@ build = ["pyinstaller>=6.0", "PyQt6>=6.5"]
 
 [project.scripts]
 speech2text-worker = "speech2text.worker:main"
+
+[project.urls]
+Homepage = "https://github.com/Royee-Yosibash/Speech2Text"
+Repository = "https://github.com/Royee-Yosibash/Speech2Text"
+Releases = "https://github.com/Royee-Yosibash/Speech2Text/releases"
+
+[tool.speech2text.release]
+release_date = "2026-10-17"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -12,6 +12,10 @@ A local speech-to-text application and installable Python package. Use the PyQt 
 - **Cross-platform** -- runs on both Ubuntu Linux and Windows.
 - **Standalone executable** -- build a distributable binary with a single command.
 
+## Current release
+
+The package release record lists version 1.0.0, dated October 17, 2026. The project author is Royee Yosibash.
+
 ## Architecture
 
 ```
