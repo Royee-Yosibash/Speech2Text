@@ -14,7 +14,7 @@ A local speech-to-text application and installable Python package. Use the PyQt 
 
 ## Current release
 
-The package release record lists version 1.0.0, dated October 17, 2026. The project author is Royee Yosibash.
+The package release record lists version 1.0.1, dated October 19, 2026. The project author is Royee Yosibash.
 
 ## Architecture
 
