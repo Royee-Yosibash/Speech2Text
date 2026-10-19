@@ -22,6 +22,27 @@ from speech2text.model.whisper_engine import WhisperEngine
 PROJECT_ROOT = Path(__file__).resolve().parent
 SPEC_FILE = PROJECT_ROOT / "Speech2Text.spec"
 DEFAULT_DIST_PATH = PROJECT_ROOT / "dist"
+INSTALL_DATA_HOME_ENVIRONMENT_VARIABLE = "SPEECH2TEXT_DATA_HOME"
+
+
+def get_install_data_home() -> Path:
+    """Return the platform's per-user data directory for the install bundle.
+
+    Returns:
+        User data directory, honoring XDG and Speech2Text overrides.
+    """
+    configured_data_home = os.environ.get(INSTALL_DATA_HOME_ENVIRONMENT_VARIABLE)
+    if configured_data_home:
+        return Path(configured_data_home).expanduser()
+
+    if sys.platform == "win32":
+        return Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
+    if sys.platform == "darwin":
+        default_data_home = Path.home() / "Library" / "Application Support"
+        return Path(os.environ.get("XDG_DATA_HOME", default_data_home)).expanduser()
+
+    default_data_home = Path.home() / ".local" / "share"
+    return Path(os.environ.get("XDG_DATA_HOME", default_data_home)).expanduser()
 
 
 def build(dist_path: Path = DEFAULT_DIST_PATH) -> None:
@@ -63,8 +84,7 @@ def main() -> None:
         parser.error("--install and --distpath cannot be used together")
 
     if arguments.install:
-        default_data_dir = Path.home() / ".local" / "share"
-        dist_path = Path(os.environ.get("XDG_DATA_HOME", default_data_dir)).expanduser()
+        dist_path = get_install_data_home()
     elif arguments.distpath is not None:
         dist_path = arguments.distpath.expanduser()
     else:

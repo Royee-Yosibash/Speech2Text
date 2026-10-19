@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "speech2text"
-version = "1.0.0"
+version = "1.0.1"
 description = "Local microphone recording and transcription"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -28,7 +28,7 @@ Repository = "https://github.com/Royee-Yosibash/Speech2Text"
 Releases = "https://github.com/Royee-Yosibash/Speech2Text/releases"
 
 [tool.speech2text.release]
-release_date = "2026-10-17"
+release_date = "2026-10-19"
 
 [tool.setuptools.packages.find]
 where = ["src"]
